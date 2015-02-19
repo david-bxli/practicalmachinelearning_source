@@ -1,0 +1,73 @@
+---
+title: Classe predict model
+output: html_document
+---
+
+** Synopsis
+
+In this report we aim to find a way to predict classe from collected motion data. There are total 5 classes, sitting-down, standing-up, standing, walking and sitting. Data collected from wearable sensor from subjects and they were weared on forearm, dumbbell, arm and belt.
+
+** Data Processing
+
+From the [Training data](https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv) we obtain the motion data from wearable sensors. And from the [Test data](https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv), we obtain the data based on which we will predict the classes.
+
+Reading storm data
+
+We firstly read data from the csv file.
+
+```{r echo = TRUE }
+original_train<-read.csv("pml-training.csv")
+```
+
+After reading in the data, we check first few rows (there are 19622) rows in this dataset
+
+```{r echo = TRUE }
+dim(original_train)
+```
+
+```{r echo = TRUE }
+str(original_train)
+```
+
+Before we start, we need reduce number of headers since there are 160 headers
+
+```{r echo = TRUE }
+names(original_train)
+```
+
+From the headers, we can find several of them are total, average, min, max, standard deviation, variance of data, and also part of them are raw data from x,y and z axis. After further investigation, we can also exclude amplitude, kurtosis and skewness. Obversely, columns such as X, user_name, raw_timestamp_part_1, raw_timestamp_part_2, cvtd_timstamp, new_window, num_window should also be excluded
+
+Then,  we have 16 columns left
+
+```{r echo = TRUE }
+original_train<-original_train[, !grepl("^var.*",names(original_train))&!grepl("^stddev.*",names(original_train))&!grepl("^avg.*",names(original_train))&!grepl("^min.*",names(original_train))&!grepl("^max.*",names(original_train))&!grepl("^total.*",names(original_train))&!grepl(".*_x$",names(original_train))&!grepl(".*_y$",names(original_train))&!grepl(".*_z$",names(original_train))&!grepl("^amplitude.*",names(original_train))&!grepl("^kurtosis.*",names(original_train))&!grepl("^skewness.*",names(original_train))]
+
+names(original_train)
+```
+
+Once we have reduced data ready, we can start next step to prepare cross validation. In this case, we split the original train data into training and testing set by 60/40
+
+```{r echo = TRUE }
+library(caret)
+inTrain<- createDataPartition(y=original_train$classe, p=0.6, list= FALSE)
+training<-original_train[inTrain,]
+testing<-original_train[-inTrain,]
+```
+
+** Model analysis
+We start from training set data. Since random forests provide bootstrap samples and has better accuracy, we use random forests to analysis the model.
+
+```{r echo = TRUE }
+modfit<-train(classe~.,data=training, method='rf')
+print(modfit$finalModel)
+```
+
+From the above information, this model has low error rate. And let's cross validate use testing set.
+
+```{r echo = TRUE }
+pred<-predict(modfit, testing)
+table(pred, testing$classe)
+```
+
+The testing set represents good result. In this case, we could tell above model is fit for classe predict.
+
